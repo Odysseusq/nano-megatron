@@ -1,4 +1,5 @@
 import torch
+import torch.distributed as dist
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 
@@ -39,3 +40,22 @@ def collate_packed(batch):
 def get_dataloader(path, tokenizer, batch_size=4, seq_len=2048, **kwargs):
     ds = get_dataset(path, tokenizer, seq_len)
     return DataLoader(ds, batch_size=batch_size, collate_fn=collate_packed, **kwargs)
+
+
+def broadcast_batch(batch):
+    rank = dist.get_rank()
+    if rank == 0:
+        sizes = torch.tensor([batch["input_ids"].shape[0], batch["cu_seqlens"].shape[0], batch["max_seqlen"]], device="cuda")
+    else:
+        sizes = torch.empty(3, dtype=torch.long, device="cuda")
+    dist.broadcast(sizes, 0)
+    n, s, m = sizes.tolist()
+    if rank != 0:
+        batch = {k: torch.empty(n, dtype=torch.long, device="cuda") for k in ["input_ids", "labels", "positions"]}
+        batch["cu_seqlens"] = torch.empty(s, dtype=torch.int32, device="cuda")
+    else:
+        batch = {k: batch[k].cuda() for k in ["input_ids", "labels", "positions", "cu_seqlens"]}
+    for k in batch:
+        dist.broadcast(batch[k], 0)
+    batch["max_seqlen"] = int(m)
+    return batch

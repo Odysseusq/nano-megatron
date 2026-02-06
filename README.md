@@ -59,8 +59,8 @@ hf download Qwen/Qwen3-0.6B
 Prepare a simple `jsonl` dataset. Keys should be `text`.
 
 ```bash
-# Use wikitext to create a jsonl-formatted dataset
-python -c "from datasets import load_dataset; load_dataset('wikitext', 'wikitext-2-raw-v1', split='train').to_json('data.jsonl')"
+# Use TinyStories to create a jsonl-formatted dataset
+python -c "from datasets import load_dataset; load_dataset('roneneldan/TinyStories', split='train[:10000]').to_json('data.jsonl')"
 ```
 
 ### 3. Configure Training
@@ -112,6 +112,14 @@ We are actively working on:
 ## 🤝 Contributing
 
 Contributions are welcome! If you find a bug or want to add a feature, please feel free to open an issue or submit a Pull Request.
+
+## 🙏 Acknowledgements
+
+This project is inspired by and learns from the following excellent open-source projects:
+
+- [Megatron-LM](https://github.com/NVIDIA/Megatron-LM)
+- [Nano-vLLM](https://github.com/GeeeekExplorer/nano-vllm)
+- [Nanotron](https://github.com/huggingface/nanotron)
 
 ## 📜 License
 

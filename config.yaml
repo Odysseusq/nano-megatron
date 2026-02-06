@@ -1,16 +1,15 @@
 model:
-  path: Qwen/Qwen3-0.6B
-  dtype: bfloat16
+  path: ../../vlcache/model_4b
 
 data:
   path: data.jsonl
   micro_batch_size: 2
-  seq_len: 4096
+  seq_len: 2048
   gradient_accumulation_steps: 2
 
 optimizer:
-  lr: 3e-4
-  min_lr: 1e-5
+  lr: 1e-5
+  min_lr: 1e-6
   weight_decay: 0.01
   adam_beta1: 0.9
   adam_beta2: 0.95

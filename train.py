@@ -10,7 +10,7 @@ from nanomegatron.utils.context import set_context
 from nanomegatron.optim.grad_accumulator import FP32GradientAccumulator
 from nanomegatron.optim.clip_grads import clip_grad_norm
 from nanomegatron.optim.lr_scheduler import get_cosine_schedule_with_warmup
-from nanomegatron.utils.data import get_dataloader
+from nanomegatron.utils.data import get_dataloader, broadcast_batch
 from nanomegatron.utils.loss import compute_loss
 from nanomegatron.config import Config
 from nanomegatron.utils.checkpoint import save_checkpoint, load_checkpoint
@@ -60,21 +60,16 @@ def train(rank, world_size, config: Config):
         start_step = load_checkpoint(model, optimizer, lr_scheduler, grad_accumulator, ckpt.resume_from)
 
     grad_acc_steps = config.data.gradient_accumulation_steps
-    dataloader = get_dataloader(config.data.path, tokenizer, batch_size=config.data.micro_batch_size,
-                                seq_len=config.data.seq_len)
-    micro_batch_iter = iter(dataloader)
-    consumed = start_step * grad_acc_steps
+    if rank == 0:
+        dataloader = get_dataloader(config.data.path, tokenizer, batch_size=config.data.micro_batch_size, seq_len=config.data.seq_len)
+        micro_batch_iter = iter(dataloader)
 
     for step in range(start_step, opt.total_steps):
         loss_acc = 0.0
         for _ in range(grad_acc_steps):
-            batch = next(micro_batch_iter)
-            consumed += 1
-            input_ids = batch["input_ids"].cuda()
-            labels = batch["labels"].cuda()
-            positions = batch["positions"].cuda()
-            cu_seqlens = batch["cu_seqlens"].cuda()
-            max_seqlen = batch["max_seqlen"]
+            batch = broadcast_batch(next(micro_batch_iter) if rank == 0 else None)
+            input_ids, labels, positions = batch["input_ids"], batch["labels"], batch["positions"]
+            cu_seqlens, max_seqlen = batch["cu_seqlens"], batch["max_seqlen"]
 
             set_context(cu_seqlens, max_seqlen)
 

@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nano-megatron"
-version = "0.2.0"
-authors = [{ name = "Xingkai Yu" }]
+version = "0.1.0"
+authors = [{ name = "Shengling Qin" }]
 license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"
-description = "a lightweight Megatron implementation built from scratch"
+description = "a lightweight Megatron implementation"
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "torch>=2.4.0",
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage="https://github.com/GeeeekExplorer/nano-megatron"
+Homepage="https://github.com/Odysseusq/nano-megatron"
 
 [tool.setuptools.packages.find]
 where = ["."]

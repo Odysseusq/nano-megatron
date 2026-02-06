@@ -19,7 +19,6 @@ def from_dict(cls, data):
 @dataclass
 class ModelConfig:
     path: str
-    dtype: str = "bfloat16"
 
 
 @dataclass
