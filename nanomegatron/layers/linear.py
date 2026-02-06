@@ -70,6 +70,40 @@ class ReplicatedLinear(LinearBase):
         return F.linear(x, self.weight, self.bias)
 
 
+class ColumnParallelLinearFunc(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input, weight, bias):
+        ctx.save_for_backward(input, weight)
+        ctx.use_bias = bias is not None
+        output = torch.matmul(input, weight.t())
+        if bias is not None:
+            output = output + bias
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, weight = ctx.saved_tensors
+        grad_input = grad_weight = grad_bias = None
+
+        if ctx.needs_input_grad[0]:
+            grad_input = torch.matmul(grad_output, weight)
+            if dist.get_world_size() > 1:
+                handle = dist.all_reduce(grad_input, op=dist.ReduceOp.SUM, async_op=True)
+
+        if ctx.needs_input_grad[1]:
+            grad_output_2d = grad_output.reshape(-1, grad_output.shape[-1])
+            input_2d = input.reshape(-1, input.shape[-1])
+            grad_weight = torch.matmul(grad_output_2d.t(), input_2d)
+
+        if ctx.use_bias and ctx.needs_input_grad[2]:
+            grad_bias = grad_output.reshape(-1, grad_output.shape[-1]).sum(dim=0)
+
+        if ctx.needs_input_grad[0] and dist.get_world_size() > 1:
+            handle.wait()
+
+        return grad_input, grad_weight, grad_bias
+
+
 class ColumnParallelLinear(LinearBase):
 
     def __init__(
@@ -89,9 +123,7 @@ class ColumnParallelLinear(LinearBase):
         param_data.copy_(loaded_weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.tp_size > 1:
-            x = differentiable_identity(x)
-        return F.linear(x, self.weight, self.bias)
+        return ColumnParallelLinearFunc.apply(x, self.weight, self.bias)
 
 
 class MergedColumnParallelLinear(ColumnParallelLinear):
