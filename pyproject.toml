@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nano-megatron"
+version = "0.2.0"
+authors = [{ name = "Xingkai Yu" }]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+description = "a lightweight Megatron implementation built from scratch"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "torch>=2.4.0",
+    "transformers>=4.51.0",
+    "flash-attn",
+    "safetensors",
+    "datasets",
+    "pyyaml",
+]
+
+[project.urls]
+Homepage="https://github.com/GeeeekExplorer/nano-megatron"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nanomegatron*"]

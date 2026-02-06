@@ -1,0 +1,29 @@
+model:
+  path: Qwen/Qwen3-0.6B
+  dtype: bfloat16
+
+data:
+  path: data.jsonl
+  micro_batch_size: 2
+  seq_len: 4096
+  gradient_accumulation_steps: 2
+
+optimizer:
+  lr: 3e-4
+  min_lr: 1e-5
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_eps: 1e-8
+  clip_grad: 1.0
+  warmup_steps: 100
+  total_steps: 2000
+
+parallelism:
+  tp: 2
+  port: 2333
+
+checkpoint:
+  save_dir: checkpoints
+  save_every: 500
+  # resume_from: checkpoints/step_500
