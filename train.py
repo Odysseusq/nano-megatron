@@ -4,15 +4,15 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from pathlib import Path
 from transformers import AutoConfig, AutoTokenizer
+
+from nanomegatron.config import Config
 from nanomegatron.models.qwen3 import Qwen3ForCausalLM
+from nanomegatron.optim.grad_accumulator import FP32GradientAccumulator
+from nanomegatron.optim.lr_scheduler import get_cosine_schedule_with_warmup
 from nanomegatron.utils.loader import load_model
 from nanomegatron.utils.context import set_context
-from nanomegatron.optim.grad_accumulator import FP32GradientAccumulator
-from nanomegatron.optim.clip_grads import clip_grad_norm
-from nanomegatron.optim.lr_scheduler import get_cosine_schedule_with_warmup
 from nanomegatron.utils.data import get_dataloader, broadcast_batch
 from nanomegatron.utils.loss import compute_loss
-from nanomegatron.config import Config
 from nanomegatron.utils.checkpoint import save_checkpoint, load_checkpoint
 
 
@@ -30,7 +30,7 @@ def get_param_groups(named_params, weight_decay):
 
 
 def train(rank, world_size, config: Config):
-    dist.init_process_group("nccl", init_method=f"tcp://localhost:{config.parallelism.port}",
+    dist.init_process_group("nccl", init_method=f"tcp://localhost:2333",
                             world_size=world_size, rank=rank)
     torch.cuda.set_device(rank)
 
@@ -51,7 +51,7 @@ def train(rank, world_size, config: Config):
     opt = config.optimizer
     optimizer_params = grad_accumulator.get_named_parameters_for_optimizer()
     param_groups = get_param_groups(optimizer_params, opt.weight_decay)
-    optimizer = torch.optim.AdamW(param_groups, lr=opt.lr, betas=(opt.adam_beta1, opt.adam_beta2), eps=opt.adam_eps)
+    optimizer = torch.optim.AdamW(param_groups, lr=opt.lr, betas=(opt.adam_beta1, opt.adam_beta2), eps=opt.adam_eps, fused=True)
     lr_scheduler = get_cosine_schedule_with_warmup(optimizer, opt.warmup_steps, opt.total_steps,
                                                    min_lr_ratio=opt.min_lr / opt.lr)
 
@@ -78,7 +78,7 @@ def train(rank, world_size, config: Config):
             grad_accumulator.backward(loss)
             loss_acc += loss.item()
 
-        grad_norm = clip_grad_norm(named_params, max_norm=opt.clip_grad, grad_accumulator=grad_accumulator)
+        grad_norm = grad_accumulator.clip_grad(max_norm=opt.clip_grad_max_norm)
         optimizer.step()
         lr_scheduler.step()
         grad_accumulator.step()

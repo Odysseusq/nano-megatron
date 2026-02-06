@@ -37,7 +37,7 @@ class OptimizerConfig:
     adam_beta1: float = 0.9
     adam_beta2: float = 0.95
     adam_eps: float = 1e-8
-    clip_grad: float = 1.0
+    clip_grad_max_norm: float = 1.0
     warmup_steps: int = 100
     total_steps: int = 2000
 
@@ -45,7 +45,6 @@ class OptimizerConfig:
 @dataclass
 class ParallelismConfig:
     tp: int = 1
-    port: int = 2333
 
 
 @dataclass

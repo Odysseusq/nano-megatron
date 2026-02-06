@@ -1,5 +1,5 @@
 model:
-  path: ../../vlcache/model_4b
+  path: Qwen/Qwen3-0.6B
 
 data:
   path: data.jsonl
@@ -14,13 +14,12 @@ optimizer:
   adam_beta1: 0.9
   adam_beta2: 0.95
   adam_eps: 1e-8
-  clip_grad: 1.0
+  clip_grad_max_norm: 1.0
   warmup_steps: 100
   total_steps: 2000
 
 parallelism:
   tp: 2
-  port: 2333
 
 checkpoint:
   save_dir: checkpoints

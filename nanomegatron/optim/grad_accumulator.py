@@ -1,11 +1,10 @@
 from collections import OrderedDict
-from collections.abc import Iterator
 import torch
 from torch import nn
 
 
 class FP32GradientAccumulator:
-    def __init__(self, named_parameters: Iterator[tuple[str, nn.Parameter]]):
+    def __init__(self, named_parameters: list[tuple[str, nn.Parameter]]):
         named_parameters = [(n, p) for n, p in named_parameters if p.requires_grad]
 
         self.fp32_grad_buffers: dict[str, dict] = OrderedDict()
@@ -52,6 +51,14 @@ class FP32GradientAccumulator:
 
     def zero_grad(self):
         self._contiguous_grad_buffer.zero_()
+
+    def clip_grad(self, max_norm: float, norm_type: float = 2.0) -> torch.Tensor:
+        total_norm = torch.linalg.vector_norm(
+            self._contiguous_grad_buffer, ord=norm_type, dtype=torch.float
+        )
+        clip_coef = torch.clamp(max_norm / (total_norm + 1e-6), max=1.0)
+        self._contiguous_grad_buffer.mul_(clip_coef)
+        return total_norm
 
     def get_parameter_for_optimizer(self, name: str) -> nn.Parameter:
         return self.parameters[name]["fp32"]
